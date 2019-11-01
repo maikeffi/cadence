@@ -2365,7 +2365,11 @@ UpdateHistoryLoop:
 			}
 		}
 
-		return context.updateWorkflowExecutionAsActive(e.shard.GetTimeSource().Now())
+		err = context.updateWorkflowExecutionAsActive(e.shard.GetTimeSource().Now())
+		if err == ErrConflict {
+			continue UpdateHistoryLoop
+		}
+		return err
 	}
 	return ErrMaxAttemptsExceeded
 }
@@ -2374,7 +2378,7 @@ func (e *historyEngineImpl) updateWorkflowExecutionWithAction(
 	ctx ctx.Context,
 	domainID string,
 	execution workflow.WorkflowExecution,
-	action func(builder mutableState) (*updateWorkflowAction, error),
+	action updateWorkflowActionFunc,
 ) (retError error) {
 
 	workflowContext := e.getWorkflowLockedContext(ctx, domainID, execution)
